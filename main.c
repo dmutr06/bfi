@@ -5,6 +5,8 @@
 
 #include "dyn_arr.h"
 
+#define DEFER() goto defer;
+
 typedef enum {
   OP_NEXT = '>',
   OP_PREV = '<',
@@ -50,8 +52,9 @@ char *get_src(const char *file_path) {
 bool interpret(const char *src) {
   char mem[30000] = {0};
   int pos = 0;
-  
-  DynArr(const char *) stack = darr_init(const char *, NULL);
+  bool status = false; 
+  DynArr(const char *) stack;
+  darr_init(&stack, NULL);
 
   while (*src != '\0') {
     switch (*src) {
@@ -83,12 +86,11 @@ bool interpret(const char *src) {
         if (mem[pos] == 0) {
           int loop_count = 1;
           while (loop_count > 0 && *++src != '\0') {
-            if (*src == OP_LOOP_START) loop_count++;
-            else if (*src == OP_LOOP_END) loop_count--;
+            if (*src == OP_LOOP_START) loop_count += 1;
+            else if (*src == OP_LOOP_END) loop_count -= 1;
           }
           if (loop_count != 0) {
-            darr_deinit(&stack);
-            return false;
+            DEFER();
           }
         } else {
           darr_push(&stack, src); 
@@ -97,8 +99,7 @@ bool interpret(const char *src) {
       }
       case OP_LOOP_END: {
         if (stack.size == 0) {
-          darr_deinit(&stack);
-          return false;
+            DEFER();
         }
         if (mem[pos] != 0) {
           src = *darr_last(&stack); 
@@ -111,9 +112,13 @@ bool interpret(const char *src) {
     src += 1;
   }
 
+  status = true;
+
+defer:
   darr_deinit(&stack);
-  return true;
+  return status;
 }
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     printf("Provide a file pls\n");
